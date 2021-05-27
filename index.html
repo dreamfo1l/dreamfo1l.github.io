@@ -660,7 +660,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-05-27 15:59:36" itemprop="dateModified" datetime="2021-05-27T15:59:36+08:00">2021-05-27</time>
+                <time title="Modified: 2021-05-27 16:01:25" itemprop="dateModified" datetime="2021-05-27T16:01:25+08:00">2021-05-27</time>
               </span>
 
           
@@ -676,54 +676,14 @@
       
           <p>[TOC]</p>
 <p>动态分析通常是在静态分析进入死胡同时进行，在无法从静态分析中获取更多的信息时，动态分析技术可以让我们观察到样本的行为，是识别样本功能的有效方法。</p>
-<h3 id="实验目的"><a href="#实验目的" class="headerlink" title="实验目的"></a>实验目的</h3><p>了解不可直接运行的DLL文件是如何安装，如何运行。以及运行过程的行为与特征。</p>
-<h3 id="实验工具"><a href="#实验工具" class="headerlink" title="实验工具"></a>实验工具</h3><h4 id="0x1-行为监控工具"><a href="#0x1-行为监控工具" class="headerlink" title="0x1 行为监控工具"></a>0x1 行为监控工具</h4><p><em>Regshot</em>：一个开源的注册表比较工具，它可以让你比较两个注册表的快照，发现差异</p>
-<p><em>Process Explorer</em> ：用来列出所有活跃的进程、被进程载入的DLL、各种进程的属性和整体系统信息</p>
-<p><em>Process Monitor</em> : 监控注册表、文件系统、网络、进程和线程行为</p>
-<h4 id="0x2-虚拟网络设置"><a href="#0x2-虚拟网络设置" class="headerlink" title="0x2 虚拟网络设置"></a>0x2 虚拟网络设置</h4><p><em>ApateDNS</em>: 通过监听UDP的53端口，对用户指定的IP地址给出虚假的DNS响应。用我们指定的IP去响应DNS查询请求</p>
-<p><em>Netcat</em>： 我们用nc的监听模式来充当一个服务器</p>
-<h3 id="分析过程"><a href="#分析过程" class="headerlink" title="分析过程"></a>分析过程</h3><h4 id="0x1-简单的静态分析"><a href="#0x1-简单的静态分析" class="headerlink" title="0x1 简单的静态分析"></a>0x1 简单的静态分析</h4><ol>
-<li><p>首先看一下导出表和导入表</p>
-<p>导出表： <img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212136-2062caee-b879-1.png" alt="导出表" title="导出表"></p>
-<p>导出表有5个函数，大概能确定程序会利用installA来安装。两个与服务相关的函数，很可能会创建一个服务。<br>导入表：<img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212014-efe51cd2-b878-1.png" alt="导入表" title="导入表"></p>
-<p>导入表中有很多关于服务操作，网络操作的函数。说明这个程序会进行联网，所以在运行程序之前提前配置好虚拟网络。</p>
-</li>
-<li><p>检查字符串</p>
-</li>
-</ol>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212156-2c7b6bce-b879-1.png"></p>
-<p>​        </p>
-<pre><code>仔细检查字符串后发现有svchost程序，因为DLL是无法直接运行的，那么猜测svchost可能导入了样本文件
-</code></pre>
-<h4 id="0x2-动态分析"><a href="#0x2-动态分析" class="headerlink" title="0x2 动态分析"></a>0x2 动态分析</h4><h5 id="安装程序"><a href="#安装程序" class="headerlink" title="安装程序"></a>安装程序</h5><ul>
-<li><pre><code>在安装程序之前，先用Regshot进行注册表快照，并用Procexp监控运行的进程
-</code></pre>
-</li>
-<li><pre><code>安装
-</code></pre>
-</li>
-</ul>
-<p>  <img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212236-44623d1c-b879-1.png"></p>
-<ul>
-<li><p>rundll32.exe运行结束后，用Regshot进行第二次快照。查看比较文档</p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212305-556adce0-b879-1.png"></p>
-</li>
-</ul>
-<h5 id="运行服务"><a href="#运行服务" class="headerlink" title="运行服务"></a>运行服务</h5><p>安装服务之后，下一步就是启动服务了。来启动服务之前，运行procmon，并配置好虚拟网络，准备监测行为</p>
-<p>启动服务：</p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212437-8c6a74ee-b879-1.png"></p>
-<p>ApataDNS监控到3个DNS请求：</p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212510-a041b5c2-b879-1.png"></p>
-<p>Netcat 监听到第二个请求的消息：</p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212536-afdf3522-b879-1.png"></p>
-<p>程序执行了一个HTTP GET请求，<strong>可以将这个对serve.html的GET请求作为网络特征码</strong>。</p>
-<p><strong>再来看看样本DLL文件是被加载到哪个进程中运行的</strong></p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212344-6d122060-b879-1.png"></p>
-<p>查看svchost.exe进程的服务，发现名称有”INA+”即程序创建的服务的显示名称</p>
-<p><img src="https://xzfile.aliyuncs.com/media/upload/picture/20200627212402-7779af0a-b879-1.png"></p>
-<p>进一步证实了刚才的推断。</p>
-<h3 id="实验总结"><a href="#实验总结" class="headerlink" title="实验总结"></a>实验总结</h3><p>通过对样本的简单静态分析后，推测样本的功能。进而使用各种手段进行动态监控程序行为，观察了DLL文件从安装到运行的整个流程，并通过虚拟网络收集到该样本的网络特征。</p>
-
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/05/24/%E4%BB%8E%E4%B8%80%E4%B8%AADLL%E5%88%86%E6%9E%90%E5%AE%9E%E4%BE%8B%E5%85%A5%E9%97%A8Windows%E5%8A%A8%E6%80%81%E6%A0%B7%E6%9C%AC%E5%88%86%E6%9E%90/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
