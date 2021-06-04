@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/df32.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/df16.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="summary三种数据流分析算法学习 1.Reaching Definitions Analysis 2.Live Variables Analysis 3.Available Expression Analysis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Data Flow Analysis Applications">
+<meta property="og:url" content="https://dreamfo1l.github.io/2021/06/04/Data%20Flow%20Analysis%20applications/index.html">
+<meta property="og:site_name" content="dreamfoil">
+<meta property="og:description" content="summary三种数据流分析算法学习 1.Reaching Definitions Analysis 2.Live Variables Analysis 3.Available Expression Analysis">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/YMuBm54vlL1Jq9P.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/mwGWkDuvlENM18C.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/zkAo59JpSvRqTyP.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/vylWx8nmDPkij1o.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/bj1E3cIoQa49zgx.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/VOL4fohma3qKeTr.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/kqJvErXxClsaPhw.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/LrjD7Je8IyV4GBc.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/xzPEAsW4UlkbpYh.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/BSNrP3CZjyxUIn2.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/UIoKHJLGO8hF2jT.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/JkXtWOQH9U2q6c7.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/tYoqmvC6FUOz5EA.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/02/gANoPBmxlCT64G2.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/RD5wJZl18p2moVe.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/2PkF53KtZJCgbHx.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/CDemsUoP1MxTA9L.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/kdY9QqNwRn4aIr6.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/apoPxYJwmVLXTDO.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/45wHCSsPt918M2Q.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/WMq9SXj71hYwJr8.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/xm6lnstyMv4wIgD.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/cNpyvtMUqADeF27.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/1jBd4OIMzC3saQl.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/ynAUXoZ427mMF1x.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/BZJYHx9XyhCKLqT.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/FuAS7P9OeMwt48K.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/ZgiAJrdfwNOSk8E.png">
+<meta property="og:image" content="https://i.loli.net/2021/06/04/vGDSqMdBbe9UtlZ.png">
+<meta property="article:published_time" content="2021-06-04T02:12:10.000Z">
+<meta property="article:modified_time" content="2021-06-04T02:16:34.042Z">
+<meta property="article:author" content="dreamfoil">
+<meta property="article:tag" content="静态分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2021/06/02/YMuBm54vlL1Jq9P.png">
+
+<link rel="canonical" href="https://dreamfo1l.github.io/2021/06/04/Data%20Flow%20Analysis%20applications/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Data Flow Analysis Applications | dreamfoil</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">dreamfoil</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://dreamfo1l.github.io/2021/06/04/Data%20Flow%20Analysis%20applications/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="dreamfoil">
+      <meta itemprop="description" content="独立之精神，自由之思想。">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="dreamfoil">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Data Flow Analysis Applications
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-06-04 10:12:10 / 修改时间：10:16:34" itemprop="dateCreated datePublished" datetime="2021-06-04T10:12:10+08:00">2021-06-04</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h2><p>三种数据流分析算法学习</p>
+<p>1.Reaching Definitions Analysis</p>
+<p>2.Live Variables Analysis</p>
+<p>3.Available Expression Analysis</p>
+<span id="more"></span>
+
+<h2 id="1-数据流分析预备知识"><a href="#1-数据流分析预备知识" class="headerlink" title="1.  数据流分析预备知识"></a>1.  数据流分析预备知识</h2><p>不同的数据流分析应用有不同的</p>
+<p><strong>data abstraction ，  flow safe-approximation strategies ， transfer functions and control-flow handlings</strong></p>
+<h3 id="1-1-Input-and-Output-States"><a href="#1-1-Input-and-Output-States" class="headerlink" title="1.1 Input and Output States"></a>1.1 Input and Output States</h3><ul>
+<li>每次执行IR语句都会将输入状态（input state）转换为新的输出状态 （output state）</li>
+<li>输入(输出)状态与语句之前(之后)的程序点相关联</li>
+</ul>
+<p><img src="https://i.loli.net/2021/06/02/YMuBm54vlL1Jq9P.png" alt="image-20210602162512222"></p>
+<h3 id="1-2-两条重要的定义"><a href="#1-2-两条重要的定义" class="headerlink" title="1.2 两条重要的定义"></a>1.2 两条重要的定义</h3><ol>
+<li><p>In each data-flow analysis application, we associate with every program point a <strong>data-flow value</strong> that represents an <em>abstraction</em> of the</p>
+<p>set of all possible <strong>program states</strong> that can be observed for that point.</p>
+<p>在每个程序点找到一个数据流值，这个值可以抽象的表示程序在该点可能的状态。</p>
+</li>
+<li><p>Data-flow analysis is to find a solution to a set of <em>safe-approximation</em> <em>directed constraints</em> on the IN[s]’s and OUT[s]’s, for all statements s. </p>
+<p>- <em>constraints</em> based on semantics of statements (<em>transfer functions</em>) </p>
+<p>- <em>constraints</em> based on the <em>flows of control</em></p>
+<p>看不明白，结合后面应用能大致了解概念。</p>
+</li>
+</ol>
+<h3 id="1-3-符号表示"><a href="#1-3-符号表示" class="headerlink" title="1.3 符号表示"></a>1.3 符号表示</h3><p>Notations for Control Flow’s Constraints</p>
+<p><img src="https://i.loli.net/2021/06/02/mwGWkDuvlENM18C.png" alt="image-20210602164736204"></p>
+<p>Notations for Control Flow’s Constraints</p>
+<p><img src="https://i.loli.net/2021/06/02/zkAo59JpSvRqTyP.png" alt="image-20210602165420333"></p>
+<h2 id="2-Reaching-Definitions-Analysis"><a href="#2-Reaching-Definitions-Analysis" class="headerlink" title="2. Reaching Definitions Analysis"></a>2. Reaching Definitions Analysis</h2><p>A definition d at program point p <em>reaches</em> a point q if there is a path from p to q such that d is not “killed” along that path</p>
+<p>在程序p点有一个定义d，如果从p到q点这条路径上定义d没有被<strong>kill</strong>，那么 p就<strong>reaches</strong> q</p>
+<p><img src="https://i.loli.net/2021/06/02/vylWx8nmDPkij1o.png" alt="image-20210602170105446"></p>
+<p>上图在路径中v 有了新的定义 所以p不reaches q</p>
+<h3 id="2-1-UnderStanding-Reaching-Definitions"><a href="#2-1-UnderStanding-Reaching-Definitions" class="headerlink" title="2.1 UnderStanding Reaching Definitions"></a>2.1 UnderStanding Reaching Definitions</h3><p>程序中所有变量的定义可以用位向量表示</p>
+<p>D1, D2, D3, D4,D5,D6    （6 definitions）</p>
+<p>0 0 0 0 0 0   从左到右依次表示Di</p>
+<p><strong>D :    v  =  x  <em>op</em>  y</strong></p>
+<p>This statement “generates” a definition D of variable v and “kills” all the other definitions in the program that define variable v, while</p>
+<p>leaving the remaining incoming definitions unaffected.</p>
+<p>这个语句 定义了变量<strong>v</strong>，并kill掉程序中其他 v的定义，并且不影响传入的其他变量定义。</p>
+<p>例图如下</p>
+<p><img src="https://i.loli.net/2021/06/02/bj1E3cIoQa49zgx.png" alt="image-20210602174551602"></p>
+<p><img src="https://i.loli.net/2021/06/02/VOL4fohma3qKeTr.png" alt="image-20210602175121126"></p>
+<p><strong>U</strong>   这里的meet符号是U，原因是<strong>只要定义存在至少一条路径能到达，那么就是reaches。</strong></p>
+<h3 id="2-2-Reaching-Definitions-的算法"><a href="#2-2-Reaching-Definitions-的算法" class="headerlink" title="2.2 Reaching Definitions 的算法"></a>2.2 Reaching Definitions 的算法</h3><p><img src="https://i.loli.net/2021/06/02/kqJvErXxClsaPhw.png" alt="image-20210602175610294"></p>
+<p>看起来复杂，通过下面例子来进行理解</p>
+<h4 id="1-将CFG中所有的定义用位向量表示"><a href="#1-将CFG中所有的定义用位向量表示" class="headerlink" title="1.将CFG中所有的定义用位向量表示"></a>1.将CFG中所有的定义用位向量表示</h4><p><img src="https://i.loli.net/2021/06/02/LrjD7Je8IyV4GBc.png" alt="image-20210602175943437"></p>
+<h4 id="2-根据算法描述，每一个Basic-Blocks-初始的OUT都为∅"><a href="#2-根据算法描述，每一个Basic-Blocks-初始的OUT都为∅" class="headerlink" title="2.根据算法描述，每一个Basic Blocks 初始的OUT都为∅"></a>2.根据算法描述，每一个Basic Blocks 初始的OUT都为∅</h4><p><img src="https://i.loli.net/2021/06/02/xzPEAsW4UlkbpYh.png" alt="image-20210602180354033"></p>
+<h4 id="3-进行数次迭代"><a href="#3-进行数次迭代" class="headerlink" title="3.进行数次迭代"></a>3.进行数次迭代</h4><p><strong>第一轮</strong></p>
+<p><img src="https://i.loli.net/2021/06/02/BSNrP3CZjyxUIn2.png" alt="image-20210602180528600"></p>
+<p>只要有OUT发生改变，就要再次迭代，这里每一个OUT都改变了，进行下一轮</p>
+<p><strong>第二轮</strong></p>
+<p><img src="https://i.loli.net/2021/06/02/UIoKHJLGO8hF2jT.png" alt="image-20210602180837762"></p>
+<p>B2，B3的OUT产生了变化，所以继续下一轮</p>
+<p><strong>第三轮</strong></p>
+<p><img src="https://i.loli.net/2021/06/02/JkXtWOQH9U2q6c7.png" alt="image-20210602191402572"></p>
+<p>每一个OUT都没有发生变化，那么这就是最终分析结果</p>
+<h4 id="4-算法总结"><a href="#4-算法总结" class="headerlink" title="4.算法总结"></a>4.算法总结</h4><p><img src="https://i.loli.net/2021/06/02/tYoqmvC6FUOz5EA.png" alt="image-20210602193548970"></p>
+<ul>
+<li><p>每一个节点的gen和kill 是保持不变的</p>
+</li>
+<li><p>当更多的facts进入输入，这些增加的facts要么被kill，要么存活下来进入输出OUT</p>
+</li>
+<li><p>当fact加入到OUT中 ，它将永远留在OUT中</p>
+</li>
+<li><p>因此OUT永远不会缩小 只会从0到1，从1到1.</p>
+</li>
+<li><p><strong>因为facts是有限的(程序中的定义是有个数的)，那么肯定存在一段迭代过程，在此过程中没有添加任何东西</strong></p>
+<p><strong>到任意OUT，到这里算法终止。</strong></p>
+</li>
+</ul>
+<p>为什么不添加fact就会终止？</p>
+<p><img src="https://i.loli.net/2021/06/02/gANoPBmxlCT64G2.png" alt="image-20210602194903581"></p>
+<p>图中说明，只要OUT没有发生变化，那IN也不会变。 只要IN没有发生变化，那OUT也不会变</p>
+<p>所以当每一个OUT都不变时，就到达了一个不动点。</p>
+<h2 id="3-Live-Variables-Analysis"><a href="#3-Live-Variables-Analysis" class="headerlink" title="3.  Live Variables Analysis"></a>3.  Live Variables Analysis</h2><h3 id="3-1-UnderStanding-Live-Variables"><a href="#3-1-UnderStanding-Live-Variables" class="headerlink" title="3.1   UnderStanding Live Variables"></a>3.1   UnderStanding Live Variables</h3><p>Live variables analysis tells whether the value of variable v at program point p could be used along some path in CFG starting at p.If so, v is live at p; otherwise, v is dead at p.</p>
+<p>Live Variables 可用做寄存器分配，比如当寄存器里都存了值，我们需要使用寄存器，那么这时就需要找到哪个寄存器里的是dead value，使用它。</p>
+<p><img src="https://i.loli.net/2021/06/04/RD5wJZl18p2moVe.png" alt="image-20210604092044432"></p>
+<p>Data Flow Values：</p>
+<p><img src="https://i.loli.net/2021/06/04/2PkF53KtZJCgbHx.png" alt="image-20210604092936326"></p>
+<p><img src="https://i.loli.net/2021/06/04/CDemsUoP1MxTA9L.png" alt="image-20210604093808987"></p>
+<h3 id="3-2-Live-Variables-算法"><a href="#3-2-Live-Variables-算法" class="headerlink" title="3.2 Live Variables 算法"></a>3.2 Live Variables 算法</h3><p><img src="https://i.loli.net/2021/06/04/kdY9QqNwRn4aIr6.png" alt="image-20210604093921992"></p>
+<h4 id="1-将所有变量用位向量表示，并将所有BBs的IN置为∅"><a href="#1-将所有变量用位向量表示，并将所有BBs的IN置为∅" class="headerlink" title="1.将所有变量用位向量表示，并将所有BBs的IN置为∅"></a>1.将所有变量用位向量表示，并将所有BBs的IN置为∅</h4><p><img src="https://i.loli.net/2021/06/04/apoPxYJwmVLXTDO.png" alt="image-20210604094221580"></p>
+<h4 id="2-迭代"><a href="#2-迭代" class="headerlink" title="2.迭代"></a>2.迭代</h4><p><img src="https://i.loli.net/2021/06/04/45wHCSsPt918M2Q.png" alt="image-20210604094311417"></p>
+<p><img src="https://i.loli.net/2021/06/04/WMq9SXj71hYwJr8.png" alt="image-20210604094505249"></p>
+<p><img src="https://i.loli.net/2021/06/04/xm6lnstyMv4wIgD.png" alt="image-20210604094525890"></p>
+<h2 id="4-Available-Expressions-Analysis"><a href="#4-Available-Expressions-Analysis" class="headerlink" title="4. Available Expressions Analysis"></a>4. Available Expressions Analysis</h2><h3 id="4-1-UnderStanding-Available-Expressions"><a href="#4-1-UnderStanding-Available-Expressions" class="headerlink" title="4.1 UnderStanding Available Expressions"></a>4.1 UnderStanding Available Expressions</h3><p>An expression x <em>op</em> y is available at program point p if (1) <strong>all</strong> paths from the entry to p <strong>must</strong> pass through the evaluation of x <em>op</em> y, and (2) after the last evaluation of x <em>op</em> y, there is no redefinition of x or y</p>
+<p>在p点，如果expresion可用，那么就能直接使用expression结果，减少运算次数。</p>
+<p><strong>Data Flow Values</strong></p>
+<p><img src="https://i.loli.net/2021/06/04/cNpyvtMUqADeF27.png" alt="image-20210604095332714"></p>
+<p><strong>这是must analysis</strong></p>
+<p>每一条从entry到p点的路径都要进行 x op y 的运算，所以用<strong>并</strong>符号</p>
+<p><img src="https://i.loli.net/2021/06/04/1jBd4OIMzC3saQl.png" alt="image-20210604095621256"></p>
+<h3 id="4-2-算法"><a href="#4-2-算法" class="headerlink" title="4.2 算法"></a>4.2 算法</h3><p><img src="https://i.loli.net/2021/06/04/ynAUXoZ427mMF1x.png" alt="image-20210604095853354"></p>
+<h4 id="1-根据算法描述，初始化OUT为U，OUT-entry-为∅"><a href="#1-根据算法描述，初始化OUT为U，OUT-entry-为∅" class="headerlink" title="1. 根据算法描述，初始化OUT为U，OUT[entry]为∅"></a>1. 根据算法描述，初始化OUT为U，OUT[entry]为∅</h4><p>注意这里初始化与前面的不同。</p>
+<p><img src="https://i.loli.net/2021/06/04/BZJYHx9XyhCKLqT.png" alt="image-20210604100051198"></p>
+<h4 id="2-迭代-1"><a href="#2-迭代-1" class="headerlink" title="2.迭代"></a>2.迭代</h4><p><img src="https://i.loli.net/2021/06/04/FuAS7P9OeMwt48K.png" alt="image-20210604100149281"></p>
+<p><img src="https://i.loli.net/2021/06/04/ZgiAJrdfwNOSk8E.png" alt="image-20210604100510322"></p>
+<h2 id="5-算法比较"><a href="#5-算法比较" class="headerlink" title="5. 算法比较"></a>5. 算法比较</h2><p><img src="https://i.loli.net/2021/06/04/vGDSqMdBbe9UtlZ.png" alt="image-20210604100611194"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%99%E6%80%81%E5%88%86%E6%9E%90/" rel="tag"># 静态分析</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/01/Basic%20Blocks%20and%20Control%20Flow%20Graph/" rel="prev" title="Basic Blocks and Control Flow Graph">
+      <i class="fa fa-chevron-left"></i> Basic Blocks and Control Flow Graph
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#summary"><span class="nav-text">summary</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%95%B0%E6%8D%AE%E6%B5%81%E5%88%86%E6%9E%90%E9%A2%84%E5%A4%87%E7%9F%A5%E8%AF%86"><span class="nav-text">1.  数据流分析预备知识</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-Input-and-Output-States"><span class="nav-text">1.1 Input and Output States</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%B8%A4%E6%9D%A1%E9%87%8D%E8%A6%81%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="nav-text">1.2 两条重要的定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E7%AC%A6%E5%8F%B7%E8%A1%A8%E7%A4%BA"><span class="nav-text">1.3 符号表示</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Reaching-Definitions-Analysis"><span class="nav-text">2. Reaching Definitions Analysis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-UnderStanding-Reaching-Definitions"><span class="nav-text">2.1 UnderStanding Reaching Definitions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Reaching-Definitions-%E7%9A%84%E7%AE%97%E6%B3%95"><span class="nav-text">2.2 Reaching Definitions 的算法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E5%B0%86CFG%E4%B8%AD%E6%89%80%E6%9C%89%E7%9A%84%E5%AE%9A%E4%B9%89%E7%94%A8%E4%BD%8D%E5%90%91%E9%87%8F%E8%A1%A8%E7%A4%BA"><span class="nav-text">1.将CFG中所有的定义用位向量表示</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E6%A0%B9%E6%8D%AE%E7%AE%97%E6%B3%95%E6%8F%8F%E8%BF%B0%EF%BC%8C%E6%AF%8F%E4%B8%80%E4%B8%AABasic-Blocks-%E5%88%9D%E5%A7%8B%E7%9A%84OUT%E9%83%BD%E4%B8%BA%E2%88%85"><span class="nav-text">2.根据算法描述，每一个Basic Blocks 初始的OUT都为∅</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%AC%A1%E8%BF%AD%E4%BB%A3"><span class="nav-text">3.进行数次迭代</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-%E7%AE%97%E6%B3%95%E6%80%BB%E7%BB%93"><span class="nav-text">4.算法总结</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Live-Variables-Analysis"><span class="nav-text">3.  Live Variables Analysis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-UnderStanding-Live-Variables"><span class="nav-text">3.1   UnderStanding Live Variables</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Live-Variables-%E7%AE%97%E6%B3%95"><span class="nav-text">3.2 Live Variables 算法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E5%B0%86%E6%89%80%E6%9C%89%E5%8F%98%E9%87%8F%E7%94%A8%E4%BD%8D%E5%90%91%E9%87%8F%E8%A1%A8%E7%A4%BA%EF%BC%8C%E5%B9%B6%E5%B0%86%E6%89%80%E6%9C%89BBs%E7%9A%84IN%E7%BD%AE%E4%B8%BA%E2%88%85"><span class="nav-text">1.将所有变量用位向量表示，并将所有BBs的IN置为∅</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E8%BF%AD%E4%BB%A3"><span class="nav-text">2.迭代</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Available-Expressions-Analysis"><span class="nav-text">4. Available Expressions Analysis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-UnderStanding-Available-Expressions"><span class="nav-text">4.1 UnderStanding Available Expressions</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E7%AE%97%E6%B3%95"><span class="nav-text">4.2 算法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E6%A0%B9%E6%8D%AE%E7%AE%97%E6%B3%95%E6%8F%8F%E8%BF%B0%EF%BC%8C%E5%88%9D%E5%A7%8B%E5%8C%96OUT%E4%B8%BAU%EF%BC%8COUT-entry-%E4%B8%BA%E2%88%85"><span class="nav-text">1. 根据算法描述，初始化OUT为U，OUT[entry]为∅</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-%E8%BF%AD%E4%BB%A3-1"><span class="nav-text">2.迭代</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%AE%97%E6%B3%95%E6%AF%94%E8%BE%83"><span class="nav-text">5. 算法比较</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dreamfoil"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">dreamfoil</p>
+  <div class="site-description" itemprop="description">独立之精神，自由之思想。</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:1224825643@qq.com" title="E-Mail → mailto:1224825643@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dreamfoil</span>
+</div>
+
+ <!--
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div> -->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
