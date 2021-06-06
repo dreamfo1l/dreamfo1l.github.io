@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/df32.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/df16.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="summary Call Graph构建 Class Hierarchy Analysis(CHA) 过程间控制流图 过程间数据流分析">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Interprocedural Analysis">
+<meta property="og:url" content="https://dreamfo1l.github.io/2021/06/06/Interprocedural%20Analysis/index.html">
+<meta property="og:site_name" content="dreamfoil">
+<meta property="og:description" content="summary Call Graph构建 Class Hierarchy Analysis(CHA) 过程间控制流图 过程间数据流分析">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606200939039.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606201108245.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606202027823.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606202347531.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606203418176.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606203632225.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606205151623.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606210332964.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606210747801.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606211752926.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606212805674.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213010504.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213829178.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213935743.png">
+<meta property="article:published_time" content="2021-06-06T13:12:10.000Z">
+<meta property="article:modified_time" content="2021-06-06T13:45:33.201Z">
+<meta property="article:author" content="dreamfoil">
+<meta property="article:tag" content="静态分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606200939039.png">
+
+<link rel="canonical" href="https://dreamfo1l.github.io/2021/06/06/Interprocedural%20Analysis/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Interprocedural Analysis | dreamfoil</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">dreamfoil</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://dreamfo1l.github.io/2021/06/06/Interprocedural%20Analysis/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="dreamfoil">
+      <meta itemprop="description" content="独立之精神，自由之思想。">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="dreamfoil">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Interprocedural Analysis
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-06-06 21:12:10 / 修改时间：21:45:33" itemprop="dateCreated datePublished" datetime="2021-06-06T21:12:10+08:00">2021-06-06</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h2><ol>
+<li>Call Graph构建</li>
+<li>Class Hierarchy Analysis(CHA)</li>
+<li>过程间控制流图</li>
+<li>过程间数据流分析</li>
+</ol>
+<span id="more"></span>
+
+<h2 id="Motivation-of-Interprocedural-Analysis"><a href="#Motivation-of-Interprocedural-Analysis" class="headerlink" title="Motivation of Interprocedural Analysis"></a>Motivation of Interprocedural Analysis</h2><p>Refer ：<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/2d14c0ae41cd">【课程笔记】过程间分析</a></p>
+<p>过程内分析如何解决函数调用?</p>
+<p>为了<code>safe-approximation</code>，对函数调用使用最保守的策略，导致分析不够精确。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606200939039.png" alt="image-20210606200939039"></p>
+<p>我们需要使用过程间分析： propagate data-flow information along <strong>interprocedural control-flow edges</strong></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606201108245.png" alt="image-20210606201108245"></p>
+<h2 id="Call-Graph-Construction"><a href="#Call-Graph-Construction" class="headerlink" title="Call Graph Construction"></a>Call Graph Construction</h2><p>本质上，<strong>Call Graph</strong>是调用边的集合，从调用点(call-sites) 到目标方法(target methods/callee)</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606202027823.png" alt="image-20210606202027823"></p>
+<h3 id="Method-Dispatch"><a href="#Method-Dispatch" class="headerlink" title="Method Dispatch"></a>Method Dispatch</h3><p>Java方法调用分类</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606202347531.png" alt="image-20210606202347531"></p>
+<p>method dispatch就是找到实际调用的函数，下面分析最复杂的<strong>Virtual Call Method Dispatch</strong></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606203418176.png" alt="image-20210606203418176"></p>
+<p><strong>定义</strong>：用Dispatch(c, m)来模拟动态Method Dispatch过程，c表示reciever object，m表示函数签名。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606203632225.png" alt="image-20210606203632225"></p>
+<p><strong>解释</strong>：若该类的非抽象方法（实际可执行的函数主体）中包含和m相同名字、传递/返回参数的m‘，则直接返回；否则到c的父类中找。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606205151623.png" alt="image-20210606205151623"></p>
+<h3 id="Class-Hierarchy-Analysis-CHA"><a href="#Class-Hierarchy-Analysis-CHA" class="headerlink" title="Class Hierarchy Analysis (CHA)"></a>Class Hierarchy Analysis (CHA)</h3><p>类层次分析</p>
+<p><strong>目的</strong>：根据每个virtual call 的 receiver varible 的<strong>声明类型</strong>来求解所有可能调用的目标函数。如 <code>A a = ... ;</code>  <code>a.foo();</code> 这个a就是receiver varible，声明类型就是A。假定a可以指向A以及A所有子类对象，CHA的过程就是从A和子类中去找目标函数。</p>
+<p><strong>算法</strong>：Resolve(cs)——利用CHA算法找到调用点所有可能的调用目标。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606210332964.png" alt="image-20210606210332964"></p>
+<p><strong>应用</strong></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606210747801.png" alt="image-20210606210747801"></p>
+<p><strong>错误</strong>：以上b.foo()的调用目标 C.foo()和D.foo()是错误的，因为<strong>已经指定了是B类型</strong>，所以b.foo()根本不会调用C、D的foo()。因为CHA只考虑声明类型，也就是B，导致准确度下降。多态性就是说，父类可以引用子类的对象，如<code>B b=new C()</code>。</p>
+<p>优缺点：CHA优点是速度快，只考虑声明类型，忽略数据流和控制流；缺点是准确度低。</p>
+<p>总结：本类中有同名函数就在本类和子类找，没有就从父类找，接着找父类的子类中的同名函数（CHA分析）</p>
+<h3 id="Build-call-graph-via-CHA"><a href="#Build-call-graph-via-CHA" class="headerlink" title="Build call graph via CHA"></a>Build call graph via CHA</h3><ol>
+<li>从入口函数开始（focus on main method）</li>
+<li>通过CHA查找每一个可达函数</li>
+<li>重复执行直到没有新函数发现</li>
+</ol>
+<p><strong>算法</strong>：遍历每个函数中的每个调用指令，调用CHA的Resolve()找到对应的目标函数和调用边，函数+调用边=调用图。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606211752926.png" alt="image-20210606211752926"></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606212805674.png" alt="image-20210606212805674"></p>
+<h2 id="Interprocedural-Control-Flow-Graph-ICFG"><a href="#Interprocedural-Control-Flow-Graph-ICFG" class="headerlink" title="Interprocedural Control-Flow Graph (ICFG)"></a>Interprocedural Control-Flow Graph (ICFG)</h2><p><strong>定义</strong>：过程间控制流图ICFG = CFG + (Call edges + Return edges)。</p>
+<ul>
+<li>Call edges：连接调用点和目标函数入口</li>
+<li>Return edges：从return语句连到Return site（Call site后面一条语句）</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213010504.png" alt="image-20210606213010504"></p>
+<h2 id="Interprocedural-Data-Flow-Analysis"><a href="#Interprocedural-Data-Flow-Analysis" class="headerlink" title="Interprocedural Data-Flow Analysis"></a>Interprocedural Data-Flow Analysis</h2><p><strong>说明</strong>：对ICFG进行数据流分析，没有标准的一套算法。</p>
+<p><strong>对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Intra</strong>procedural</th>
+<th><strong>Inter</strong>procecdural</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Program representation</strong></td>
+<td>CFG</td>
+<td>ICFG = CFGs + call &amp; return edges</td>
+</tr>
+<tr>
+<td><strong>Transfer Functions</strong></td>
+<td>Node transfer</td>
+<td>Node transfer + edge transfer</td>
+</tr>
+</tbody></table>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213829178.png" alt="image-20210606213829178"></p>
+<p><strong>示例</strong></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210606213935743.png" alt="image-20210606213935743"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%99%E6%80%81%E5%88%86%E6%9E%90/" rel="tag"># 静态分析</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/04/Data%20Flow%20Analysis%20/" rel="prev" title="Data Flow Analysis">
+      <i class="fa fa-chevron-left"></i> Data Flow Analysis
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#summary"><span class="nav-text">summary</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Motivation-of-Interprocedural-Analysis"><span class="nav-text">Motivation of Interprocedural Analysis</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Call-Graph-Construction"><span class="nav-text">Call Graph Construction</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Method-Dispatch"><span class="nav-text">Method Dispatch</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Class-Hierarchy-Analysis-CHA"><span class="nav-text">Class Hierarchy Analysis (CHA)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Build-call-graph-via-CHA"><span class="nav-text">Build call graph via CHA</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Interprocedural-Control-Flow-Graph-ICFG"><span class="nav-text">Interprocedural Control-Flow Graph (ICFG)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Interprocedural-Data-Flow-Analysis"><span class="nav-text">Interprocedural Data-Flow Analysis</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dreamfoil"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">dreamfoil</p>
+  <div class="site-description" itemprop="description">独立之精神，自由之思想。</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:1224825643@qq.com" title="E-Mail → mailto:1224825643@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dreamfoil</span>
+</div>
+
+ <!--
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div> -->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

