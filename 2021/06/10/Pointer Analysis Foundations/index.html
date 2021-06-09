@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/df32.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/df16.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="summary 指针分析的规则 怎样实现指针分析 指针分析的算法 实现过程内指针分析与过程间指针分析">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Pointer Analysis Foundations">
+<meta property="og:url" content="https://dreamfo1l.github.io/2021/06/10/Pointer%20Analysis%20Foundations/index.html">
+<meta property="og:site_name" content="dreamfoil">
+<meta property="og:description" content="summary 指针分析的规则 怎样实现指针分析 指针分析的算法 实现过程内指针分析与过程间指针分析">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609221930212.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609223219521.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609223835733.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609231732197.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609232154564.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609232448832.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609234025226.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235808473.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235742564.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235717531.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610002259113.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610002440178.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610003521756.png">
+<meta property="article:published_time" content="2021-06-09T16:44:10.000Z">
+<meta property="article:modified_time" content="2021-06-09T16:44:25.872Z">
+<meta property="article:author" content="dreamfoil">
+<meta property="article:tag" content="静态分析">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609221930212.png">
+
+<link rel="canonical" href="https://dreamfo1l.github.io/2021/06/10/Pointer%20Analysis%20Foundations/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Pointer Analysis Foundations | dreamfoil</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">dreamfoil</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://dreamfo1l.github.io/2021/06/10/Pointer%20Analysis%20Foundations/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpg">
+      <meta itemprop="name" content="dreamfoil">
+      <meta itemprop="description" content="独立之精神，自由之思想。">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="dreamfoil">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Pointer Analysis Foundations
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-06-10 00:44:10 / 修改时间：00:44:25" itemprop="dateCreated datePublished" datetime="2021-06-10T00:44:10+08:00">2021-06-10</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h2><ol>
+<li>指针分析的规则</li>
+<li>怎样实现指针分析</li>
+<li>指针分析的算法</li>
+<li>实现过程内指针分析与过程间指针分析</li>
+</ol>
+<span id="more"></span>
+
+<p>Refer:<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/5cbc5bb5c4da">指针分析基础</a></p>
+<h2 id="1-Pointer-Analysis-Rules"><a href="#1-Pointer-Analysis-Rules" class="headerlink" title="1. Pointer Analysis: Rules"></a>1. Pointer Analysis: Rules</h2><p>影响指针的语句：</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609221930212.png" alt="image-20210609221930212"></p>
+<p>这里先学习前四种语句，即假设程序只有一个函数。 后面再学习带有<strong>Call</strong>的过程间指针分析</p>
+<ul>
+<li>New：创建对象，将<code>new T()</code>对应的对象oi加入到x的指针集。</li>
+<li>Assign：将y的指针集加入到x对应的指针集。</li>
+<li>Store：让oi的field指向oj。</li>
+<li>Load：Store的反操作。</li>
+</ul>
+<p><strong>符号表示：</strong></p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609223219521.png" alt="image-20210609223219521"></p>
+<p><strong>Rules</strong>：</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609223835733.png" alt="image-20210609223835733"></p>
+<h2 id="2-How-to-Implement-Pointer-Analysis"><a href="#2-How-to-Implement-Pointer-Analysis" class="headerlink" title="2. How to Implement Pointer Analysis"></a>2. How to Implement Pointer Analysis</h2><p>Essentially, pointer analysis is to propagate <em><strong>points-to information</strong></em> among pointers </p>
+<p><strong>Solution</strong>：</p>
+<p>• We use a <strong>graph</strong> to connect related pointers</p>
+<p>• When <em><strong>pt(x)</strong></em> changes, propagate the changed part  to 𝑥’s <strong>successors</strong></p>
+<h3 id="2-1-Pointer-Flow-Graph-PFG"><a href="#2-1-Pointer-Flow-Graph-PFG" class="headerlink" title="2.1 Pointer Flow Graph(PFG)"></a>2.1 Pointer Flow Graph(PFG)</h3><p>当一个指针的指向集发生变化，必须更新与它相关的其他指针。如何表示这种传递关系？PFG!</p>
+<p><strong>PFG</strong>：用指针流图PFG来表示指针之间的关系，PFG是<strong>有向图</strong></p>
+<ul>
+<li>Nodes：Pointer = V U (O x F) 节点n表示一个变量或抽象对象的域。</li>
+<li>Edges：Pointer X Pointer 边x -&gt; y 表示指针x指向的对象may会流入指针y。 (<strong>may flow to</strong>)</li>
+</ul>
+<p><strong>Edges添加规则：</strong>根据程序语句 + 对应的规则   </p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609231732197.png" alt="image-20210609231732197"></p>
+<p>示例：</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609232154564.png" alt="image-20210609232154564"></p>
+<h3 id=""><a href="#" class="headerlink" title=""></a></h3><p><strong>实现指针分析</strong></p>
+<p>构建PFG 和 传播指针信息  这两步是互相依赖的，指针分析过程中，PFG是在动态更新的。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609232448832.png" alt="image-20210609232448832"></p>
+<h2 id="3-Algorithems"><a href="#3-Algorithems" class="headerlink" title="3.Algorithems"></a>3.Algorithems</h2><h3 id="3-1-过程内PTA算法"><a href="#3-1-过程内PTA算法" class="headerlink" title="3.1  过程内PTA算法"></a>3.1  过程内PTA算法</h3><p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609234025226.png" alt="image-20210609234025226"></p>
+<p><strong>符号</strong>：</p>
+<ul>
+<li>S：程序语句的集合。</li>
+<li>WL：Work list，待合并的指针信息，二元组的集合，&lt;指针n，指向的对象集合pts&gt;。pts将被加入到n的指向集pt(n)中。</li>
+<li>PFG：指针流图。</li>
+</ul>
+<p><strong>步骤</strong>：对每种语句都是基于第1小节的规则来实现。</p>
+<ol>
+<li>对S中所有类似**New <code>x = new T()</code>**的语句，将&lt;x, {oi}&gt;加入到WL。</li>
+<li>对S中所有类似**Assign <code>x = y</code>**的语句，调用<code>AddEdge()</code>将<code>y -&gt; x</code>加入到PFG，&lt;x, pt(y)&gt;加入到WL（传播指向信息）。</li>
+<li>遍历WL，取一个元素&lt;n, pts&gt;，除去pts中与pt(n)重复的对象得到∆，调用Propagate(n,∆)将∆加入到pt(n)，且取出PFG中所有n指向的边<code>n-&gt;s</code>，将&lt;s, pts&gt;加入到WL</li>
+<li>如果n表示一个变量x（x跟Store/Load指令相关），对∆中的每个对象oi。对S中所有类似**Store <code>x.f = y</code><strong>的语句，调用<code>AddEdge()</code>将<code>y -&gt; oi.f</code>加入到PFG，&lt;oi.f, pt(y)&gt;加入到WL（传播指向信息）；对S中所有类似</strong>Load <code>y = x.f</code>**的语句，调用<code>AddEdge()</code>将<code>oi.f -&gt; y</code>加入到PFG，&lt;y, pt(oi.f)&gt;加入到WL（传播指向信息）。</li>
+</ol>
+<p>为什么要去重？避免冗余，英文叫做<strong>Differential propagation</strong>差异传播</p>
+<p>示例：</p>
+<p>Program:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span> b = <span class="keyword">new</span> C(); </span><br><span class="line"><span class="number">2</span> a = b;</span><br><span class="line"><span class="number">3</span> c = <span class="keyword">new</span> C(); </span><br><span class="line"><span class="number">4</span> c.f = a;</span><br><span class="line"><span class="number">5</span> d = c;</span><br><span class="line"><span class="number">6</span> c.f = d; </span><br><span class="line"><span class="number">7</span> e = d.f;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th align="center">Step</th>
+<th align="center">WL</th>
+<th align="center">正处理</th>
+<th align="center">PFG</th>
+<th>指针集</th>
+<th>处理语句</th>
+<th>算法语句</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">[&lt;b, {o1}&gt;, &lt;c, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td></td>
+<td>1，3</td>
+<td>处理New</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">[&lt;b, {o1}&gt;, &lt;c, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center">a&lt;-b；d&lt;-c；</td>
+<td></td>
+<td>2，4</td>
+<td>处理Assign</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">[&lt;c, {o3}&gt;]</td>
+<td align="center">&lt;b, {o1}&gt;</td>
+<td align="center">a&lt;-b；d&lt;-c；</td>
+<td>pt(b)={o1}</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">[&lt;c, {o3}&gt;], &lt;a, {o1}&gt;]</td>
+<td align="center"></td>
+<td align="center">a&lt;-b；d&lt;-c；</td>
+<td></td>
+<td></td>
+<td>Propagate()传递，没有b.f语句</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">[&lt;a, {o1}&gt;]</td>
+<td align="center">&lt;c, {o3}&gt;</td>
+<td align="center">a&lt;-b；d&lt;-c；</td>
+<td>pt(c)={o3}</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">[&lt;a, {o1}&gt;, &lt;d, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center">a&lt;-b；d&lt;-c；</td>
+<td></td>
+<td></td>
+<td>Propagate()传递，有c.f语句</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">[&lt;a, {o1}&gt;, &lt;d, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center">a&lt;-b；d&lt;-c；o3.f&lt;-a；o3.f&lt;-d；<img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235808473.png" alt="image-20210609235808473"></td>
+<td></td>
+<td>4，6</td>
+<td>处理Store/Load，添加边</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">[&lt;d, {o3}&gt;]</td>
+<td align="center">&lt;a, {o1}&gt;</td>
+<td align="center"></td>
+<td>pt(a)={o1}；</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">[&lt;d, {o3}&gt;,&lt;o3.f, {o1}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td></td>
+<td></td>
+<td>Propagate()传递</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td align="center">[&lt;o3.f, {o1}&gt;]</td>
+<td align="center">&lt;d, {o3}&gt;</td>
+<td align="center"></td>
+<td>pt(d)={o3}</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">11</td>
+<td align="center">[&lt;o3.f, {o1}&gt;, &lt;o3.f, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td></td>
+<td></td>
+<td>Propagate()传递，有d.f语句</td>
+</tr>
+<tr>
+<td align="center">12</td>
+<td align="center">[&lt;o3.f, {o1}&gt;, &lt;o3.f, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center">a&lt;-b；d&lt;-c；o3.f&lt;-a；o3.f&lt;-d；e&lt;-o3.f；  <img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235742564.png" alt="image-20210609235742564"></td>
+<td></td>
+<td>7</td>
+<td>处理Load，添加边</td>
+</tr>
+<tr>
+<td align="center">13</td>
+<td align="center">[&lt;o3.f, {o3}&gt;]</td>
+<td align="center">&lt;o3.f, {o1}&gt;</td>
+<td align="center"></td>
+<td>pt(o3.f)={o1}；</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">14</td>
+<td align="center">[&lt;o3.f, {o3}&gt;, &lt;e, {o1}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td></td>
+<td></td>
+<td>Propagate()传递</td>
+</tr>
+<tr>
+<td align="center">15</td>
+<td align="center">[&lt;e, {o1}&gt;]</td>
+<td align="center">&lt;o3.f, {o3}&gt;</td>
+<td align="center"></td>
+<td>pt(o3.f)={o1, o3}</td>
+<td></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">16</td>
+<td align="center">[&lt;e, {o1}&gt;, &lt;e, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td></td>
+<td></td>
+<td>Propagate()传递</td>
+</tr>
+<tr>
+<td align="center">17</td>
+<td align="center"></td>
+<td align="center">&lt;e, {o1}&gt;；&lt;e, {o3}&gt;</td>
+<td align="center"><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210609235717531.png" alt="image-20210609235717531"></td>
+<td>pt(e)={o1, o3}</td>
+<td></td>
+<td>while开头</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-过程间PTA算法"><a href="#3-2-过程间PTA算法" class="headerlink" title="3.2 过程间PTA算法"></a>3.2 过程间PTA算法</h3><p><strong>构造调用图技术对比</strong>：</p>
+<ul>
+<li>CHA：基于声明类型，不精确，引入错误的调用边和指针关系。</li>
+<li>指针分析：基于pt(a)，即a指向的类型，更精确，构造更准的CG并对指针分析有正反馈（所以过程间指针分析和CG构造同时进行，很复杂）。</li>
+</ul>
+<h4 id="3-2-1-调用语句规则"><a href="#3-2-1-调用语句规则" class="headerlink" title="3.2.1 调用语句规则"></a>3.2.1 调用语句规则</h4><p><strong>找目标函数m</strong>：Dispatch(oi, k)——找出pt(x)，也即oi类型对象中的k函数。</p>
+<p><strong>receiver object</strong>：把x指向的对象（<code>pt(x)</code>）传到m函数的this变量，即mthis</p>
+<p><strong>传参数</strong>：即把实参传给形参，pt(aj), 1&lt;=j&lt;=n  传给m函数，即p(mpj), 1&lt;=j&lt;=n。**建立PFG边**，a1-&gt;mp1，…，an-&gt;mpn。</p>
+<p><strong>传返回值</strong>：pt(mret)传给pt(r)。<strong>建立PFG边</strong>，r&lt;-mret。</p>
+<h4 id="3-2-2-算法"><a href="#3-2-2-算法" class="headerlink" title="3.2.2 算法"></a>3.2.2 算法</h4><p>由于指针分析和CG构造互相影响，所以每次迭代只分析可达的函数和语句。然后不断发现和分析新的可达函数。</p>
+<p>可达示例：</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610002259113.png" alt="image-20210610002259113"></p>
+<p><strong>算法</strong>：黄色背景的代码是和过程内分析不同的地方。</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610002440178.png" alt="image-20210610002440178"></p>
+<p><strong>符号</strong>：</p>
+<ul>
+<li>m entry：入口main函数</li>
+<li>Sm：函数m中的语句</li>
+<li>S：可达语句的集合（就是RM中的语句）</li>
+<li>RM：可达函数的集合</li>
+<li>CG：调用图的边</li>
+</ul>
+<p><strong>步骤</strong>：基于调用规则来实现。</p>
+<ol>
+<li>首先调用**AddReachable(mentry)<strong>，将入口函数mentry的语句加到S中。处理</strong>New <code>x = new T()</code><strong>语句，把&lt;x, {oi}&gt;加入到WL；处理</strong>Assign <code>x = y</code>**语句，调用<code>AddEdge(y, x)</code>加入边到PFG。</li>
+<li>跟过程内指针分析一样，遍历WL，取一个元素&lt;n, pts&gt;，除去pts中与pt(n)重复的对象得到∆，调用Propagate(n,∆)将∆加入到pt(n)，且取出PFG中所有n指向的边n-&gt;s，将&lt;s, pts&gt;加入到WL（根据PFG将指向信息传递给同名指针）。</li>
+<li>如果n表示一个变量x（x跟Store/Load指令相关），对∆</li>
+<li>中的每个对象oi。对S中所有类似**Store <code>x.f = y</code><strong>的语句，调用<code>AddEdge()</code>将<code>y -&gt; oi.f</code>加入到PFG，&lt;oi.f, pt(y)&gt;加入到WL（传播指向信息）；对S中所有类似</strong>Load <code>y = x.f</code>**的语句，调用<code>AddEdge()</code>将<code>oi.f -&gt; y</code>加入到PFG，&lt;y, pt(oi.f)&gt;加入到WL（传播指向信息）。</li>
+<li>最后调用<strong>ProcessCall(x, oi)<strong>，处理与x相关的</strong>call指令</strong>。取出S中类似<code>r = x.k(a1,...,an)</code>的调用语句L，首先调用Dispatch(oi, k)解出调用的目标函数m，把&lt;mthis, {oi}&gt;加入到WL（传递接收对象，上下文敏感分析将用到），将<code>L-&gt;m</code>这条调用边加入到CG；调用**AddReachable(m)**将新的语句加入到S，并处理New/Assign语句；调用AddEdge()将<code>实参-&gt;形参</code>、<code>返回值-&gt;r</code>边加入到PFG（传递参数、返回值），并将<code>&lt;形参,pt(实参)&gt;</code>、<code>&lt;r,pt(返回值)&gt;</code>加入到WL。</li>
+</ol>
+<p><strong>问题</strong>：为什么ProcessCall(x, oi)中，要判断<code>L-&gt;m</code>这条边是否已经加入到CG？因为x可能指向多个对象，就会多次处理L这个调用指令，可能x中别的对象oj早就已经将这条边加入进去了</p>
+<h4 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span> <span class="class"><span class="keyword">class</span> <span class="title">A</span> &#123;</span></span><br><span class="line"><span class="number">2</span>   <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line"><span class="number">3</span>       A a = <span class="keyword">new</span> A();</span><br><span class="line"><span class="number">4</span>       A b = <span class="keyword">new</span> B();</span><br><span class="line"><span class="number">5</span>       A c = b.foo(a);</span><br><span class="line"><span class="number">6</span>   &#125;</span><br><span class="line"><span class="number">7</span>   <span class="function">A <span class="title">foo</span><span class="params">(Ax)</span></span>&#123;...&#125;</span><br><span class="line"><span class="number">8</span> &#125;</span><br><span class="line"><span class="number">9</span> <span class="class"><span class="keyword">class</span> <span class="title">B</span> <span class="title">extends</span> <span class="title">A</span> &#123;</span>  </span><br><span class="line"><span class="number">10</span>  <span class="function">A <span class="title">foo</span><span class="params">(A y)</span> </span>&#123;</span><br><span class="line"><span class="number">11</span>      A r=newA();</span><br><span class="line"><span class="number">12</span>      <span class="keyword">return</span> r;</span><br><span class="line"><span class="number">13</span>      &#125;</span><br><span class="line"><span class="number">14</span>  &#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th align="center"></th>
+<th align="center">WL</th>
+<th align="center">正处理</th>
+<th align="center">PFG</th>
+<th align="center">指针集</th>
+<th align="center">RM</th>
+<th align="center">CG</th>
+<th align="center">语句</th>
+<th>算法语句</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">[]</td>
+<td align="center"></td>
+<td align="center">{}</td>
+<td align="center"></td>
+<td align="center">{}</td>
+<td align="center">{}</td>
+<td align="center"></td>
+<td>初始化</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">[]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">{A.main()}</td>
+<td align="center"></td>
+<td align="center">1，2</td>
+<td>AddReachable(mentry)</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">[&lt;a,{o3}&gt;, &lt;b,{o4}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">3，4</td>
+<td></td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">[&lt;b,{o4}&gt;]</td>
+<td align="center">&lt;a,{o3}&gt;</td>
+<td align="center"></td>
+<td align="center">pt(a)={o3}；</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td align="center">[]</td>
+<td align="center">&lt;b,{o4}&gt;</td>
+<td align="center"></td>
+<td align="center">pt(b)={o4}</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td align="center">[]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">5</td>
+<td>ProcessCall(b, o4)</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td align="center">[&lt;B.foothis, {o4}&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">{5-&gt;B.foo(A)}</td>
+<td align="center"></td>
+<td>m=Dispatch(o4, foo())=B.foo()；添加到调用图</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td align="center">[&lt;B.foothis, {o4}&gt;, &lt;r, o11&gt;]</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center">{A.main(), B.foo()}</td>
+<td align="center"></td>
+<td align="center"></td>
+<td>AddReachable(B.foo())；添加到可达函数</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td align="center">[&lt;B.foothis, {o4}&gt;, &lt;r, o11&gt;, &lt;y, {o3}&gt;]</td>
+<td align="center"></td>
+<td align="center">{a-&gt;y, r-&gt;c}</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>AddEdge()；添加参数边、返回值边</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td align="center">[&lt;r, o11&gt;, &lt;y, {o3}&gt;]</td>
+<td align="center">&lt;B.foothis, {o4}&gt;</td>
+<td align="center"></td>
+<td align="center">pt(B.foothis)={o4}；</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>while开头，B.foothis没有调用任何函数</td>
+</tr>
+<tr>
+<td align="center">11</td>
+<td align="center">[&lt;y, {o3}&gt;, &lt;c, {o11}&gt;]</td>
+<td align="center">&lt;r, o11&gt;</td>
+<td align="center"></td>
+<td align="center">pt(r)={o11}；</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>while开头</td>
+</tr>
+<tr>
+<td align="center">12</td>
+<td align="center"></td>
+<td align="center">&lt;y, {o3}&gt;, &lt;c, {o11}&gt;</td>
+<td align="center"></td>
+<td align="center">pt(y)={o3}；pt(c)={o11}</td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td>while开头</td>
+</tr>
+</tbody></table>
+<p>如果是CHA的话，CG={5-&gt;B.foo(A), <strong>5-&gt;A.foo(A)</strong>}，错误识别为调用边。</p>
+<p><strong>结果</strong>：</p>
+<p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210610003521756.png" alt="image-20210610003521756"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E9%9D%99%E6%80%81%E5%88%86%E6%9E%90/" rel="tag"># 静态分析</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/08/Pointer%20Analysis%20Introductions/" rel="prev" title="Pointer Analysis  Introductions">
+      <i class="fa fa-chevron-left"></i> Pointer Analysis  Introductions
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#summary"><span class="nav-text">summary</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Pointer-Analysis-Rules"><span class="nav-text">1. Pointer Analysis: Rules</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-How-to-Implement-Pointer-Analysis"><span class="nav-text">2. How to Implement Pointer Analysis</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Pointer-Flow-Graph-PFG"><span class="nav-text">2.1 Pointer Flow Graph(PFG)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text"></span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Algorithems"><span class="nav-text">3.Algorithems</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%BF%87%E7%A8%8B%E5%86%85PTA%E7%AE%97%E6%B3%95"><span class="nav-text">3.1  过程内PTA算法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%BF%87%E7%A8%8B%E9%97%B4PTA%E7%AE%97%E6%B3%95"><span class="nav-text">3.2 过程间PTA算法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2-1-%E8%B0%83%E7%94%A8%E8%AF%AD%E5%8F%A5%E8%A7%84%E5%88%99"><span class="nav-text">3.2.1 调用语句规则</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2-2-%E7%AE%97%E6%B3%95"><span class="nav-text">3.2.2 算法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-text">示例</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="dreamfoil"
+      src="/images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">dreamfoil</p>
+  <div class="site-description" itemprop="description">独立之精神，自由之思想。</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="mailto:1224825643@qq.com" title="E-Mail → mailto:1224825643@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">dreamfoil</span>
+</div>
+
+ <!--
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div> -->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
