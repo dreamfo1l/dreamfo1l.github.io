@@ -20,12 +20,12 @@
     var CONFIG = {"hostname":"dreamfo1l.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="sekurlsa模块无法正常抓取密码哈希，报错如图  猜测产生问题的原因1. admin权限无法直接从lsass.exe进程内存中直接获取密码哈希尝试解决方法： 1.将进程内存dump下来，然后再使用mimikatz分析dmp文件 2.提升权限至trustedinstaller再执行 sekurlsa::logonpasswords  两种方法试了很多次都会报错，在尝试解决的中，发现在wind">
+  <meta name="description" content="mimikatz在windows11上会报错 学习mimikatz sekurlsa模块原理，解决这个问题。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Mimikatz在Windows 11 上运行的问,">
 <meta property="og:url" content="https://dreamfo1l.github.io/2021/07/27/Mimikatz/index.html">
 <meta property="og:site_name" content="dreamfoil">
-<meta property="og:description" content="sekurlsa模块无法正常抓取密码哈希，报错如图  猜测产生问题的原因1. admin权限无法直接从lsass.exe进程内存中直接获取密码哈希尝试解决方法： 1.将进程内存dump下来，然后再使用mimikatz分析dmp文件 2.提升权限至trustedinstaller再执行 sekurlsa::logonpasswords  两种方法试了很多次都会报错，在尝试解决的中，发现在wind">
+<meta property="og:description" content="mimikatz在windows11上会报错 学习mimikatz sekurlsa模块原理，解决这个问题。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727005823537.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727102159296.png">
@@ -35,7 +35,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727133236994.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727133542149.png">
 <meta property="article:published_time" content="2021-07-27T08:12:10.000Z">
-<meta property="article:modified_time" content="2021-07-27T08:25:41.935Z">
+<meta property="article:modified_time" content="2021-07-27T08:27:36.265Z">
 <meta property="article:author" content="dreamfoil">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727005823537.png">
@@ -187,7 +187,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2021-07-27 16:12:10 / 修改时间：16:25:41" itemprop="dateCreated datePublished" datetime="2021-07-27T16:12:10+08:00">2021-07-27</time>
+              <time title="创建时间：2021-07-27 16:12:10 / 修改时间：16:27:36" itemprop="dateCreated datePublished" datetime="2021-07-27T16:12:10+08:00">2021-07-27</time>
             </span>
 
           
@@ -201,7 +201,9 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <span id="more"></span>
+        <p>mimikatz在windows11上会报错</p>
+<p>学习mimikatz sekurlsa模块原理，解决这个问题。</p>
+<span id="more"></span>
 
 <p><strong>sekurlsa</strong>模块无法正常抓取密码哈希，报错如图</p>
 <p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727005823537.png" alt="image-20210727005823537"></p>
