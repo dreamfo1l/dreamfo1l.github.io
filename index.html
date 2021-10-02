@@ -177,7 +177,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2021-10-02 14:00:10 / 修改时间：16:44:45" itemprop="dateCreated datePublished" datetime="2021-10-02T14:00:10+08:00">2021-10-02</time>
+              <time title="创建时间：2021-10-02 14:00:10 / 修改时间：17:01:06" itemprop="dateCreated datePublished" datetime="2021-10-02T14:00:10+08:00">2021-10-02</time>
             </span>
 
           
@@ -191,7 +191,9 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h3 id="0x01-创建窗口类"><a href="#0x01-创建窗口类" class="headerlink" title="0x01 创建窗口类"></a>0x01 创建窗口类</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 窗口类名，不要与系统的重复</span></span><br><span class="line">LPCTSTR lpszClassName = TEXT(<span class="string">&quot;My First Window&quot;</span>);</span><br><span class="line"><span class="comment">// 创建窗口类</span></span><br><span class="line">WNDCLASS wndclass;</span><br><span class="line">wndclass.style = <span class="number">0</span>;</span><br><span class="line">wndclass.lpfnWndProc = WindowProc;   </span><br><span class="line">wndclass.cbClsExtra = <span class="number">0</span>;</span><br><span class="line">wndclass.cbWndExtra = <span class="number">0</span>;</span><br><span class="line">wndclass.hInstance = hInstance;</span><br><span class="line">wndclass.hIcon = <span class="number">0</span>;</span><br><span class="line">wndclass.hCursor = <span class="number">0</span>;</span><br><span class="line">wndclass.hbrBackground = (HBRUSH)COLOR_MENU;</span><br><span class="line">wndclass.lpszMenuName = <span class="literal">NULL</span>;</span><br><span class="line">wndclass.lpszClassName = lpszClassName;</span><br></pre></td></tr></table></figure>
+          <span id="more"></span>
+
+<h3 id="0x01-创建窗口类"><a href="#0x01-创建窗口类" class="headerlink" title="0x01 创建窗口类"></a>0x01 创建窗口类</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 窗口类名，不要与系统的重复</span></span><br><span class="line">LPCTSTR lpszClassName = TEXT(<span class="string">&quot;My First Window&quot;</span>);</span><br><span class="line"><span class="comment">// 创建窗口类</span></span><br><span class="line">WNDCLASS wndclass;</span><br><span class="line">wndclass.style = <span class="number">0</span>;</span><br><span class="line">wndclass.lpfnWndProc = WindowProc;   </span><br><span class="line">wndclass.cbClsExtra = <span class="number">0</span>;</span><br><span class="line">wndclass.cbWndExtra = <span class="number">0</span>;</span><br><span class="line">wndclass.hInstance = hInstance;</span><br><span class="line">wndclass.hIcon = <span class="number">0</span>;</span><br><span class="line">wndclass.hCursor = <span class="number">0</span>;</span><br><span class="line">wndclass.hbrBackground = (HBRUSH)COLOR_MENU;</span><br><span class="line">wndclass.lpszMenuName = <span class="literal">NULL</span>;</span><br><span class="line">wndclass.lpszClassName = lpszClassName;</span><br></pre></td></tr></table></figure>
 <h3 id="0x02-注册窗口类"><a href="#0x02-注册窗口类" class="headerlink" title="0x02 注册窗口类"></a>0x02 注册窗口类</h3><p><code>RegisterClass(&amp;wndclass)</code><br>​</p>
 <h3 id="0x03-创建窗口"><a href="#0x03-创建窗口" class="headerlink" title="0x03 创建窗口"></a>0x03 创建窗口</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 创建窗口</span></span><br><span class="line">HWND hwnd = CreateWindow(</span><br><span class="line">	lpszClassName,</span><br><span class="line">	TEXT(<span class="string">&quot;我的第1个WIN32应用程序&quot;</span>),</span><br><span class="line">	WS_OVERLAPPEDWINDOW,</span><br><span class="line">	<span class="number">400</span>, <span class="number">300</span>, <span class="number">400</span>, <span class="number">300</span>,   <span class="comment">// x, y , width,height</span></span><br><span class="line">	<span class="literal">NULL</span>,</span><br><span class="line">	<span class="literal">NULL</span>,</span><br><span class="line">	hInstance,</span><br><span class="line">	<span class="literal">NULL</span></span><br><span class="line">);</span><br><span class="line"><span class="keyword">if</span> (hwnd == <span class="literal">NULL</span>)</span><br><span class="line">&#123;</span><br><span class="line">	MessageBox(hwnd, TEXT(<span class="string">&quot;创建窗口失败&quot;</span>), TEXT(<span class="string">&quot;错误&quot;</span>), MB_OK);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <h3 id="0x04-显示窗口"><a href="#0x04-显示窗口" class="headerlink" title="0x04 显示窗口"></a>0x04 显示窗口</h3><p><code>ShowWindow(hwnd,SW_SHOW);</code><br>​</p>
@@ -244,7 +246,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2021/09/06/Mimikatz/" class="post-title-link" itemprop="url">Mimikatz在Windows 11 上运行的问题</a>
+            <a href="/2021/09/06/Mimikatz/" class="post-title-link" itemprop="url">Mimikatz在Windows 11上运行的问题</a>
         </h2>
 
         <div class="post-meta">
@@ -261,7 +263,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2021-10-02 16:44:52" itemprop="dateModified" datetime="2021-10-02T16:44:52+08:00">2021-10-02</time>
+                <time title="修改时间：2021-10-02 17:01:22" itemprop="dateModified" datetime="2021-10-02T17:01:22+08:00">2021-10-02</time>
               </span>
 
           
@@ -275,7 +277,9 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p><strong>sekurlsa</strong>模块无法正常抓取密码哈希，报错如图</p>
+          <span id="more"></span>
+
+<p><strong>sekurlsa</strong>模块无法正常抓取密码哈希，报错如图</p>
 <p><img src="https://raw.githubusercontent.com/dreamfo1l/blogImages/master/image-20210727163838089.png" alt="image-20210727163838089"></p>
 <h3 id="猜测产生问题的原因"><a href="#猜测产生问题的原因" class="headerlink" title="猜测产生问题的原因"></a>猜测产生问题的原因</h3><h4 id="1-admin权限无法直接从lsass-exe进程内存中直接获取密码哈希"><a href="#1-admin权限无法直接从lsass-exe进程内存中直接获取密码哈希" class="headerlink" title="1. admin权限无法直接从lsass.exe进程内存中直接获取密码哈希"></a>1. admin权限无法直接从lsass.exe进程内存中直接获取密码哈希</h4><p><strong>尝试解决方法：</strong></p>
 <p>1.将进程内存dump下来，然后再使用mimikatz分析dmp文件</p>
